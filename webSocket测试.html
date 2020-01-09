@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title></title>
+	</head>
+	<body>
+		<div onclick="getdd()">
+			打印
+		</div>
+	</body>
+	<script>var socket;
+var getdd
+var jsonObject = {
+	content: {
+		"data": {
+			"_dataFrom": "waybill",
+			"cpCode": "YUNDA",
+			"needEncrypt": false,
+			"parent": false,
+			
+			"routingInfo": {
+				"consolidation": {
+					"code": "J210039",
+					"name": "南京市内包"
+				},
+				"origin": {
+					"code": "455387",
+					"name": "河南安阳公司安钢南分部"
+				},
+				"routeCode": "B003 000",
+				"sortation": {
+					"name": "470"
+				}
+			},
+			"sender": {
+				"address": {
+					"city": "安阳市",
+					"detail": "安钢六区",
+					"district": "殷都区",
+					"province": "河南省"
+				},
+				"mobile": "02221-61223829958",
+				"name": "23424234项目组",
+				"phone": "032321-3234525235"
+			},
+			"shippingOption": {
+				"code": "STANDARD_EXPRESS",
+				"title": "标准快递"
+			},
+			"waybillCode": "3738460008834"
+		},
+		"signature": "19d6f7759487e556ddcdd3d499af087080403277b7deed1a951cc3d9a93c42a7e22ccba94ff609976c5d3ceb069b641f541bc9906098438d362cae002dfd823a8654b2b4f655e96317d7f60eef1372bb983a4e3174cc8d321668c49068071eaea873071ed683dd24810e51afc0bc925b7a2445fdbc2034cdffb12cb4719ca6b7",
+		"templateURL": "http://cloudprint.cainiao.com/template/standard/401/177"
+	}
+}
+var num= [{
+            waybillCode:"3738460008834",
+            printData:{
+                data:'',
+                templateURL:'http://cloudprint.cainiao.com/template/standard/101/123'
+            },
+            objectId:"1"
+    	}]
+var defaultPrinter
+//备注：webSocket 是全局对象，不要每次发送请求丢去创建一个，做到webSocket对象重用，和打印组件保持长连接。
+//		function doConnect()
+//		{
+		    socket = new WebSocket('ws://127.0.0.1:13528');
+		    //如果是https的话，端口是13529
+		    //socket = new WebSocket('wss://localhost:13529');
+		    // 打开Socket
+		    socket.onopen = function(event)
+		    {
+		    	getPrintList()//打印机列表
+		        // 监听消息
+		        socket.onmessage = function(event)
+		        {
+		            console.log('Client received a message',event);
+		            console.log(JSON.parse(event.data).defaultPrinter)
+		            defaultPrinter = JSON.parse(event.data).defaultPrinter
+		        };
+		        // 监听Socket的关闭
+		        socket.onclose = function(event)
+		        {
+		            console.log('Client notified socket has closed',event);
+		        };
+		    };
+//		}
+//		doConnect()
+getdd = function(){
+					doPrint(defaultPrinter,num)
+				}
+
+		/***
+		 * 
+		 * 获取请求的UUID，指定长度和进制,如 
+		 * getUUID(8, 2)   //"01001010" 8 character (base=2)
+		 * getUUID(8, 10) // "47473046" 8 character ID (base=10)
+		 * getUUID(8, 16) // "098F4D35"。 8 character ID (base=16)
+		 *   
+		 */
+		function getUUID(len, radix) {
+		    var chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'.split('');
+		    var uuid = [], i;
+		    radix = radix || chars.length; 
+		    if (len) {
+		      for (i = 0; i < len; i++) uuid[i] = chars[0 | Math.random()*radix];
+		    } else {
+		      var r;
+		      uuid[8] = uuid[13] = uuid[18] = uuid[23] = '-';
+		      uuid[14] = '4';
+		      for (i = 0; i < 36; i++) {
+		        if (!uuid[i]) {
+		          r = 0 | Math.random()*16;
+		          uuid[i] = chars[(i == 19) ? (r & 0x3) | 0x8 : r];
+		        }
+		      }
+		    }
+		    return uuid.join('');
+		}
+		/***
+		 * 构造request对象
+		 */
+		function getRequestObject(cmd) {
+		    var request  = new Object();
+		    request.requestID=getUUID(8, 16);
+		    request.version="1.0";
+		    request.cmd=cmd;
+		    return request;
+		}
+		/***
+		 * 获取自定义区数据以及模板URL
+		 * waybillNO 电子面单号
+		 */
+		function getCustomAreaData(waybillNO){
+		    //获取waybill对应的自定义区的JSON object，此处的ajaxGet函数是伪代码
+		    //var jsonObject = {jiade:1234}//ajaxGet(waybillNO);
+		    var ret = new Object();
+		    ret.templateURL=jsonObject.content.templateURL;
+		    ret.data=jsonObject.content.data;
+		    return ret;
+		}
+		/***
+		 * 获取电子面单Json 数据
+		 * waybillNO 电子面单号
+		 */
+		function getWaybillJson(waybillNO){
+		    //获取waybill对应的json object，此处的ajaxGet函数是伪代码
+		   // var jsonObject = {jiade:1234}// ajaxGet(waybillNO);
+		    return jsonObject;
+		}
+		/**
+		 * 请求打印机列表demo
+		 * */
+		function getPrintList(){
+			var request  = getRequestObject("getPrinters");
+		
+			if (socket.readyState===1) {
+				console.log(request)
+		        socket.send(JSON.stringify(request));
+		    }
+		}
+		/**
+		 * 弹窗模式配置打印机
+		 * */
+		function getPrintInPop(){
+			var request  = getRequestObject("printerConfig");
+		
+			if (socket.readyState===1) {
+				console.log(request)
+		        socket.send(JSON.stringify(request));
+		    }
+		}
+		
+		
+		/**
+		 * 打印电子面单
+		 * printer 指定要使用那台打印机
+		 * waybillArray 要打印的电子面单的数组
+		 */
+		
+		function doPrint(printer, waybillArray)
+		{
+		    var request = getRequestObject("print");    
+		    request.task = new Object();
+		    request.task.taskID = getUUID(8,10);
+		    request.task.preview = false;
+		    request.task.printer = printer;
+		    var documents = new Array();
+		    for(i=0;i<waybillArray.length;i++) {
+		         var doc = new Object();
+		         doc.documentID = waybillArray[i];
+		         var content = new Array();
+		         var waybillJson = getWaybillJson(waybillArray[i]);
+		       //  var customAreaData = getCustomAreaData(waybillArray[i]);
+		        // content.push(waybillJson,customAreaData);
+		         content.push(waybillJson,'测试数据');
+				
+		         doc.contents = content;
+		         documents.push(doc);
+		    }
+		    request.task.documents = documents
+		    socket.send(JSON.stringify(request));
+		}
+		/**
+		 * 响应请求demo
+		 * */
+		socket.onmessage = function (event) {   
+		    var response = eval(event.data);
+		    if (response.cmd == 'getPrinters') {
+		        getPrintersHandler(response);//处理打印机列表
+		    } else if (response.cmd == 'printerConfig') {
+		        printConfigHandler(response);
+		    } 
+		};
+		
+		
+		
+		
+	</script>
+</html>
