@@ -1,0 +1,10 @@
+
+.normal {
+  font-family: Georgia, sans-serif;
+  text-align: center;
+  background: rgb(213, 215, 216);
+  width:1000px;
+  margin: 6em;
+  border: 1px solid black;
+}
+
